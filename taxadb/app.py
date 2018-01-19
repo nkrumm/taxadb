@@ -104,40 +104,42 @@ def create_db(args):
         for i in range(0, len(taxa_info_list), args.chunk):
             Taxa.insert_many(taxa_info_list[i:i+args.chunk]).execute()
     print('Taxa: completed')
+    
+    # if we are building more than just the taxdump database
+    if div != "taxdump":
+        parser.verbose("Checking table accession ...")
+        # At first load, table accession does not exist yet, we create it
+        db.create_table(Accession, safe=True)
 
-    parser.verbose("Checking table accession ...")
-    # At first load, table accession does not exist yet, we create it
-    db.create_table(Accession, safe=True)
-
-    if div in ['full', 'nucl', 'est']:
-        acc_dl_list.append(nucl_est)
-    if div in ['full', 'nucl', 'gb']:
-        acc_dl_list.append(nucl_gb)
-    if div in ['full', 'nucl', 'gss']:
-        acc_dl_list.append(nucl_gss)
-    if div in ['full', 'nucl', 'wgs']:
-        acc_dl_list.append(nucl_wgs)
-    if div in ['full', 'prot']:
-        acc_dl_list.append(prot)
-    parser = Accession2TaxidParser(verbose=args.verbose, fast=args.fast)
-    with db.atomic():
-        for acc_file in acc_dl_list:
-            inserted_rows = 0
-            parser.verbose("Parsing %s" % str(acc_file))
-            for data_dict in parser.accession2taxid(acc2taxid=os.path.join(
-                    args.input, acc_file), chunk=args.chunk):
-                Accession.insert_many(data_dict[0:args.chunk]).execute()
-                inserted_rows += len(data_dict)
-            print('%s: %s added to database (%d rows inserted)'
-                  % (Accession.get_table_name(), acc_file, inserted_rows))
-        if not Accession.has_index(name='accession_accession'):
-            print('Creating index for %s' % Accession.get_table_name())
-            try:
-                db.create_index(Accession, ['accession'], unique=True)
-            except PeeweeException as err:
-                raise Exception("Could not create Accession index: %s"
-                                % str(err))
-    print('Accession: completed')
+        if div in ['full', 'nucl', 'est']:
+            acc_dl_list.append(nucl_est)
+        if div in ['full', 'nucl', 'gb']:
+            acc_dl_list.append(nucl_gb)
+        if div in ['full', 'nucl', 'gss']:
+            acc_dl_list.append(nucl_gss)
+        if div in ['full', 'nucl', 'wgs']:
+            acc_dl_list.append(nucl_wgs)
+        if div in ['full', 'prot']:
+            acc_dl_list.append(prot)
+        parser = Accession2TaxidParser(verbose=args.verbose, fast=args.fast)
+        with db.atomic():
+            for acc_file in acc_dl_list:
+                inserted_rows = 0
+                parser.verbose("Parsing %s" % str(acc_file))
+                for data_dict in parser.accession2taxid(acc2taxid=os.path.join(
+                        args.input, acc_file), chunk=args.chunk):
+                    Accession.insert_many(data_dict[0:args.chunk]).execute()
+                    inserted_rows += len(data_dict)
+                print('%s: %s added to database (%d rows inserted)'
+                      % (Accession.get_table_name(), acc_file, inserted_rows))
+            if not Accession.has_index(name='accession_accession'):
+                print('Creating index for %s' % Accession.get_table_name())
+                try:
+                    db.create_index(Accession, ['accession'], unique=True)
+                except PeeweeException as err:
+                    raise Exception("Could not create Accession index: %s"
+                                    % str(err))
+        print('Accession: completed')
     db.close()
 
 
@@ -233,9 +235,9 @@ def main():
     parser_create.add_argument(
         '--division',
         '-d',
-        choices=['full', 'nucl', 'prot', 'gb', 'wgs', 'gss', 'est'],
+        choices=['full', 'nucl', 'prot', 'gb', 'wgs', 'gss', 'est', 'taxdump'],
         default='full',
-        metavar='[full|nucl|prot|gb|wgs|gss|est]',
+        metavar='[full|nucl|prot|gb|wgs|gss|est|taxdump]',
         help='division to build (default: %(default)s))'
     )
     parser_create.add_argument(

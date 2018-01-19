@@ -23,38 +23,38 @@ def download(args):
 
     """
     ncbi_ftp = 'ftp.ncbi.nlm.nih.gov'
+    FTP_FILES = {
+        "nucl_est": 'pub/taxonomy/accession2taxid/nucl_est.accession2taxid.gz',
+        "nucl_gb": 'pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz',
+        "nucl_gss": 'pub/taxonomy/accession2taxid/nucl_gss.accession2taxid.gz',
+        "nucl_wgs": 'pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz',
+        "prot": 'pub/taxonomy/accession2taxid/prot.accession2taxid.gz',
+        "taxdump": 'pub/taxonomy/taxdump.tar.gz'
+    }
 
-    # files to download in accession2taxid
-    nucl_est = 'nucl_est.accession2taxid.gz'
-    nucl_gb = 'nucl_gb.accession2taxid.gz'
-    nucl_gss = 'nucl_gss.accession2taxid.gz'
-    nucl_wgs = 'nucl_wgs.accession2taxid.gz'
-    prot = 'prot.accession2taxid.gz'
-    acc_dl_list = [nucl_est, nucl_gb, nucl_gss, nucl_wgs, prot]
-    taxdump = 'taxdump.tar.gz'
-
+    if args.tables == "all":
+        dl_path_dict = FTP_FILES
+    else:
+        dl_path_dict = {name: FTP_FILES[name] for name in FTP_FILES if name in args.tables}
+    
     out = args.outdir
     os.makedirs(os.path.abspath(out), exist_ok=True)
     os.chdir(os.path.abspath(out))
 
-    for file in acc_dl_list:
+    for name, path in dl_path_dict.items():
+        path, file = os.path.split(path)
         print('Started Downloading %s' % file)
         with ftputil.FTPHost(ncbi_ftp, 'anonymous', 'password') as ncbi:
-            ncbi.chdir('pub/taxonomy/accession2taxid/')
+            ncbi.chdir(path)
             ncbi.download_if_newer(file, file)
             ncbi.download_if_newer(file + '.md5', file + '.md5')
             util.md5_check(file)
-
-    print('Started Downloading %s' % taxdump)
-    with ftputil.FTPHost(ncbi_ftp, 'anonymous', 'password') as ncbi:
-        ncbi.chdir('pub/taxonomy/')
-        ncbi.download_if_newer(taxdump, taxdump)
-        ncbi.download_if_newer(taxdump + '.md5', taxdump + '.md5')
-        util.md5_check(taxdump)
-    print('Unpacking %s' % taxdump)
-    with tarfile.open(taxdump, "r:gz") as tar:
-        tar.extractall()
-        tar.close()
+        # Special handling for taxdump.tar.gz file
+        if name == "taxdump":
+            print('Unpacking %s' % file)
+            with tarfile.open(file, "r:gz") as tar:
+                tar.extractall()
+                tar.close()
 
 
 def create_db(args):
@@ -177,6 +177,14 @@ def main():
         metavar='<dir>',
         help='Output Directory',
         required=True
+    )
+    parser_download.add_argument(
+        '--tables',
+        help='NCBI table(s) to download; defaults to all tables',
+        required=False,
+        default="all",
+        choices=["nucl_est","nucl_gb","nucl_gss","nucl_wgs","prot","taxdump","all"],
+        nargs='+'
     )
     parser_download.set_defaults(func=download)
 

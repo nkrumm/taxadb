@@ -38,6 +38,23 @@ class TaxID(TaxaDB):
         except Taxa.DoesNotExist:
             return None
 
+    def tax_id(self, sci_name):
+        """Get taxonomy id from a scientific name
+
+        Given a taxid, return its associated scientific name
+
+        Args:
+            taxid (:obj:`int`): a taxid
+        Returns:
+            str: name, scientific name or None if taxid not found
+
+        """
+        try:
+            ncbi_taxid = Taxa.get(Taxa.tax_name == sci_name).ncbi_taxid
+            return ncbi_taxid
+        except Taxa.DoesNotExist:
+            return None
+
     def lineage_id(self, taxid, reverse=False):
         """Get lineage for a taxonomic id
 

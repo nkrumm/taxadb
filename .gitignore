@@ -40,3 +40,5 @@ doc/_build
 doc/_static
 doc/_sources
 
+txdb
+build/

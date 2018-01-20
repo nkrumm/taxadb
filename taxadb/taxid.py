@@ -55,7 +55,7 @@ class TaxID(TaxaDB):
         except Taxa.DoesNotExist:
             return None
 
-    def tax_id_fuzzy(self, sci_name):
+    def tax_id_fuzzy(self, sci_name, limit=10):
         """Get a list of matching taxonomy ids from a scientific name 
         using fuzzy string matching.
 
@@ -71,9 +71,9 @@ class TaxID(TaxaDB):
             ## DO FUZZY MATCH
             ncbi_taxids = Taxa.raw("""SELECT taxa.*, similarity(taxa.tax_name, %s), levenshtein(taxa.tax_name, %s)
                                     FROM taxa
-                                    WHERE taxa.tax_name % %s
-                                    order by similarity desc limit 10""", sci_name);
-            return ncbi_taxid
+                                    WHERE taxa.tax_name %% %s
+                                    order by similarity desc limit %s""", sci_name, sci_name, sci_name, limit);
+            return list(ncbi_taxids)
         except Taxa.DoesNotExist:
             return None
 

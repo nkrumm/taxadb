@@ -44,16 +44,39 @@ class TaxID(TaxaDB):
         Given a taxid, return its associated scientific name
 
         Args:
-            taxid (:obj:`int`): a taxid
-        Returns:
-            str: name, scientific name or None if taxid not found
+            sci_name (:obj:`string`): a scientific/taxonomy name
 
+        Returns:
+            int: taxid, taxid matching scientific name, or None if taxid not found
         """
         try:
             ncbi_taxid = Taxa.get(Taxa.tax_name == sci_name).ncbi_taxid
             return ncbi_taxid
         except Taxa.DoesNotExist:
             return None
+
+    def tax_id_fuzzy(self, sci_name):
+        """Get a list of matching taxonomy ids from a scientific name 
+        using fuzzy string matching.
+
+        Given a taxid, return  associated scientific names
+
+        Args:
+            sci_name (:obj:`string`): a scientific/taxonomy name
+
+        Returns:
+            list: taxids, list of taxid matching scientific name, or [] if none are found
+        """
+        try:
+            ## DO FUZZY MATCH
+            ncbi_taxids = Taxa.raw("""SELECT taxa.*, similarity(taxa.tax_name, %s), levenshtein(taxa.tax_name, %s)
+                                    FROM taxa
+                                    WHERE taxa.tax_name % %s
+                                    order by similarity desc limit 10""", sci_name);
+            return ncbi_taxid
+        except Taxa.DoesNotExist:
+            return None
+
 
     def lineage_id(self, taxid, reverse=False):
         """Get lineage for a taxonomic id
